@@ -1,12 +1,17 @@
 # Emotion6 - Text Emotion Detection System
 
 <div align="center">
-  <img src="https://via.placeholder.com/200x80?text=Emotion6" alt="Emotion6 Logo" />
+  <div style="font-size: 32px; font-weight: bold; color: #4285F4; background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding: 20px 0;">
+    Emotion6
+  </div>
   <p align="center">
     <a href="#features"><img src="https://img.shields.io/badge/Features-Complete-green.svg" /></a>
     <a href="#performance"><img src="https://img.shields.io/badge/Accuracy-92%25-brightgreen.svg" /></a>
     <a href="#languages"><img src="https://img.shields.io/badge/Languages-English%2C%20Chinese-blue.svg" /></a>
     <a href="#license"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" /></a>
+  </p>
+  <p align="center">
+    <a href="READMECN.md" style="text-decoration: none; color: #4285F4; font-weight: bold; padding: 5px 10px; border: 1px solid #4285F4; border-radius: 5px; margin: 5px;">中文版本</a>
   </p>
 </div>
 
