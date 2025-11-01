@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detection System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#EC4899',
+                        neutral: '#64748B',
+                        happy: '#10B981',
+                        sad: '#3B82F6',
+                        angry: '#EF4444',
+                        fear: '#8B5CF6',
+                        surprise: '#F59E0B',
+                        neutral: '#64748B'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .card-shadow-dark {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            }
+            .transition-all-300 {
+                transition: all 300ms ease-in-out;
+            }
+            .scale-hover {
+                transition: transform 0.3s ease;
+            }
+            .scale-hover:hover {
+                transform: scale(1.02);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-all duration-300">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-all duration-300">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-primary text-white p-2 rounded-lg">
+                    <i class="fa fa-line-chart text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-primary">Emotion6</h1>
+            </div>
+            
+            <!-- Theme Toggle -->
+            <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                <input type="checkbox" id="theme-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 ease-in-out" />
+                <label for="theme-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer transition-all duration-300 ease-in-out"></label>
+                <div class="toggle-icon absolute left-0 top-0 h-full w-full flex items-center justify-between px-1 pointer-events-none">
+                    <i class="fa fa-moon-o text-gray-600"></i>
+                    <i class="fa fa-sun-o text-yellow-500"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- Introduction -->
+        <section class="mb-10 text-center">
+            <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4">Six Emotion Detection System</h2>
+            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Analyze text to detect six basic emotions: Happy, Sad, Angry, Fear, Surprise, and Neutral.
+                Supports both single text analysis and batch processing from CSV files.
+            </p>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Single Text Analysis -->
+            <section class="bg-white dark:bg-gray-800 rounded-2xl p-6 card-shadow dark:card-shadow-dark scale-hover">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fa fa-comment-o text-primary mr-2"></i>
+                    Single Text Analysis
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="text-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Input Text</label>
+                        <textarea id="text-input" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-primary transition-all-300" placeholder="Enter text to analyze emotions..."></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="threshold" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confidence Threshold: <span id="threshold-value">0.5</span></label>
+                        <input type="range" id="threshold" min="0.1" max="0.9" step="0.1" value="0.5" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <button id="analyze-btn" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-magic mr-2"></i>
+                        Analyze Emotions
+                    </button>
+                </div>
+                
+                <!-- Single Analysis Results -->
+                <div id="single-results" class="mt-6 hidden">
+                    <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded-xl mb-4">
+                        <h4 class="font-semibold mb-2">Input Text:</h4>
+                        <p id="result-text" class="text-gray-700 dark:text-gray-300"></p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-3">Predicted Emotions:</h4>
+                        <div id="predicted-emotions" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold mb-3">Confidence Scores:</h4>
+                        <div class="space-y-3">
+                            <div id="emotion-bars"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex justify-center">
+                        <canvas id="emotion-chart" width="300" height="300"></canvas>
+                    </div>
+                    
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
+                        Processing time: <span id="processing-time"></span>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Batch Processing -->
+            <section class="bg-white dark:bg-gray-800 rounded-2xl p-6 card-shadow dark:card-shadow-dark scale-hover">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fa fa-file-text-o text-secondary mr-2"></i>
+                    Batch Processing
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="batch-threshold" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confidence Threshold: <span id="batch-threshold-value">0.5</span></label>
+                        <input type="range" id="batch-threshold" min="0.1" max="0.9" step="0.1" value="0.5" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-secondary">
+                    </div>
+                    
+                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-all duration-300 hover:border-secondary/50" id="drop-area">
+                        <input type="file" id="file-input" class="hidden" accept=".csv">
+                        <label for="file-input" class="cursor-pointer">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fa fa-cloud-upload text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-600 dark:text-gray-300">Drag & drop CSV file here or <span class="text-secondary font-medium">browse</span></p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">CSV should contain a 'text' column</p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <button id="batch-analyze-btn" class="w-full bg-secondary hover:bg-secondary/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center" disabled>
+                        <i class="fa fa-cogs mr-2"></i>
+                        Process Batch
+                    </button>
+                </div>
+                
+                <!-- Batch Processing Results -->
+                <div id="batch-results" class="mt-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">Batch Results</h4>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                            Total texts: <span id="batch-total"></span> | 
+                            Time: <span id="batch-processing-time"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider rounded-tl-xl">Text</th>
+                                    <th class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Emotions</th>
+                                    <th class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider rounded-tr-xl">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batch-results-table" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Results will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <h4 class="font-semibold mb-3">Batch Summary</h4>
+                        <canvas id="batch-summary-chart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <button id="export-results-btn" class="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-all duration-300">
+                        <i class="fa fa-download mr-1"></i>
+                        Export Results
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+        <!-- README Section -->
+        <section class="mt-12 max-w-4xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Project Documentation</h2>
+                <div class="flex space-x-2">
+                    <button id="en-readme-btn" class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">English</button>
+                    <button id="cn-readme-btn" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">中文</button>
+                </div>
+            </div>
+            <div id="readme-content" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm max-h-96 overflow-y-auto">
+                    <style>
+                        #readme-content h1 { font-size: 1.8rem; margin: 1.5rem 0 1rem 0; font-weight: bold; }
+                        #readme-content h2 { font-size: 1.5rem; margin: 1.2rem 0 0.8rem 0; font-weight: bold; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3rem; }
+                        #readme-content h3 { font-size: 1.3rem; margin: 1rem 0 0.6rem 0; font-weight: bold; }
+                        #readme-content h4 { font-size: 1.1rem; margin: 0.8rem 0 0.5rem 0; font-weight: bold; }
+                        #readme-content h5 { font-size: 1rem; margin: 0.7rem 0 0.4rem 0; font-weight: bold; }
+                        #readme-content h6 { font-size: 0.9rem; margin: 0.6rem 0 0.3rem 0; font-weight: bold; }
+                        #readme-content p { margin-bottom: 0.8rem; line-height: 1.6; }
+                        #readme-content strong { font-weight: bold; }
+                        #readme-content em { font-style: italic; }
+                        #readme-content pre { background-color: #f1f1f1; dark:background-color: #374151; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; margin: 1rem 0; }
+                        #readme-content code { font-family: 'Consolas', 'Monaco', monospace; background-color: #f1f1f1; dark:background-color: #374151; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9rem; }
+                        #readme-content ul, #readme-content ol { margin: 1rem 0 1rem 1.5rem; }
+                        #readme-content li { margin-bottom: 0.5rem; }
+                        #readme-content blockquote { border-left: 4px solid #ddd; padding-left: 1rem; color: #666; }
+                        
+                        /* 深色模式样式 */
+                        .dark #readme-content h1, .dark #readme-content h2, .dark #readme-content h3, 
+                        .dark #readme-content h4, .dark #readme-content h5, .dark #readme-content h6 {
+                            color: #e5e7eb;
+                        }
+                        .dark #readme-content h2 { border-bottom-color: #4b5563; }
+                        .dark #readme-content pre { background-color: #1f2937; color: #e5e7eb; }
+                        .dark #readme-content code { background-color: #1f2937; color: #e5e7eb; }
+                    </style>
+                    <p>Loading documentation...</p>
+                </div>
+        </section>
+
+    <footer class="bg-white dark:bg-gray-800 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
+            <p>&copy; 2024 Emotion6 Detection System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Modal for detailed emotion view -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Detailed Emotion Analysis</h3>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="modal-content" class="space-y-4">
+                <!-- Content will be dynamically added -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        // Check user preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            themeToggle.checked = true;
+        } else {
+            html.classList.remove('dark');
+            themeToggle.checked = false;
+        }
+        
+        themeToggle.addEventListener('change', () => {
+            if (themeToggle.checked) {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            } else {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            }
+            // Update charts with new theme
+            updateChartThemes();
+        });
+        
+        // Threshold sliders
+        const thresholdSlider = document.getElementById('threshold');
+        const thresholdValue = document.getElementById('threshold-value');
+        
+        thresholdSlider.addEventListener('input', () => {
+            thresholdValue.textContent = thresholdSlider.value;
+        });
+        
+        const batchThresholdSlider = document.getElementById('batch-threshold');
+        const batchThresholdValue = document.getElementById('batch-threshold-value');
+        
+        batchThresholdSlider.addEventListener('input', () => {
+            batchThresholdValue.textContent = batchThresholdSlider.value;
+        });
+        
+        // Single analysis
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const textInput = document.getElementById('text-input');
+        const singleResults = document.getElementById('single-results');
+        const resultText = document.getElementById('result-text');
+        const predictedEmotions = document.getElementById('predicted-emotions');
+        const emotionBars = document.getElementById('emotion-bars');
+        const processingTime = document.getElementById('processing-time');
+        
+        // Chart instances
+        let emotionChart = null;
+        let batchSummaryChart = null;
+        
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('Please enter text to analyze');
+                return;
+            }
+            
+            // Show loading state
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> Analyzing...';
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        threshold: parseFloat(thresholdSlider.value)
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Display results
+                resultText.textContent = result.text;
+                
+                // Clear previous results
+                predictedEmotions.innerHTML = '';
+                emotionBars.innerHTML = '';
+                
+                // Add predicted emotions
+                result.predicted_emotions.forEach(emotion => {
+                    const emotionTag = document.createElement('span');
+                    const colorClass = getEmotionColorClass(emotion);
+                    emotionTag.className = `px-3 py-1 rounded-full text-sm font-medium ${colorClass}`;
+                    emotionTag.textContent = emotion;
+                    predictedEmotions.appendChild(emotionTag);
+                });
+                
+                // Add emotion bars
+                const emotions = Object.entries(result.emotion_scores).sort((a, b) => b[1] - a[1]);
+                emotions.forEach(([emotion, score]) => {
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'space-y-1';
+                    
+                    const barHeader = document.createElement('div');
+                    barHeader.className = 'flex justify-between text-sm';
+                    barHeader.innerHTML = `
+                        <span>${emotion}</span>
+                        <span class="font-medium">${(score * 100).toFixed(1)}%</span>
+                    `;
+                    
+                    const barWrapper = document.createElement('div');
+                    barWrapper.className = 'w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5';
+                    
+                    const barFill = document.createElement('div');
+                    const colorClass = getEmotionColor(emotion);
+                    barFill.className = `h-2.5 rounded-full ${colorClass} transition-all duration-1000 ease-out`;
+                    barFill.style.width = '0%'; // Start at 0 for animation
+                    
+                    barWrapper.appendChild(barFill);
+                    barContainer.appendChild(barHeader);
+                    barContainer.appendChild(barWrapper);
+                    emotionBars.appendChild(barContainer);
+                    
+                    // Animate the bar
+                    setTimeout(() => {
+                        barFill.style.width = `${score * 100}%`;
+                    }, 100);
+                });
+                
+                // Update chart
+                updateEmotionChart(result.emotion_scores);
+                
+                // Show processing time
+                processingTime.textContent = result.processing_time;
+                
+                // Show results section with animation
+                singleResults.classList.remove('hidden');
+                singleResults.classList.add('animate-fadeIn');
+                
+                // Scroll to results
+                singleResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                // Reset button
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fa fa-magic mr-2"></i> Analyze Emotions';
+            }
+        });
+        
+        // Batch processing
+        const fileInput = document.getElementById('file-input');
+        const batchAnalyzeBtn = document.getElementById('batch-analyze-btn');
+        const dropArea = document.getElementById('drop-area');
+        const batchResults = document.getElementById('batch-results');
+        const batchResultsTable = document.getElementById('batch-results-table');
+        const batchTotal = document.getElementById('batch-total');
+        const batchProcessingTime = document.getElementById('batch-processing-time');
+        const exportResultsBtn = document.getElementById('export-results-btn');
+        let batchResultsData = null;
+        
+        // File input handling
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const filename = fileInput.files[0].name;
+                batchAnalyzeBtn.disabled = false;
+                
+                // Update drop area to show selected file
+                dropArea.innerHTML = `
+                    <div class="flex items-center justify-center">
+                        <i class="fa fa-file-text-o text-secondary mr-2"></i>
+                        <span class="text-gray-800 dark:text-gray-200">${filename}</span>
+                    </div>
+                `;
+            }
+        });
+        
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('border-secondary', 'bg-secondary/5');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('border-secondary', 'bg-secondary/5');
+        }
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                const filename = files[0].name;
+                batchAnalyzeBtn.disabled = false;
+                
+                // Update drop area to show selected file
+                dropArea.innerHTML = `
+                    <div class="flex items-center justify-center">
+                        <i class="fa fa-file-text-o text-secondary mr-2"></i>
+                        <span class="text-gray-800 dark:text-gray-200">${filename}</span>
+                    </div>
+                `;
+            }
+        }
+        
+        batchAnalyzeBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            // Show loading state
+            batchAnalyzeBtn.disabled = true;
+            batchAnalyzeBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> Processing...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('threshold', batchThresholdSlider.value);
+                
+                const response = await fetch('/batch_analyze', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Store results for export
+                batchResultsData = result;
+                
+                // Update batch info
+                batchTotal.textContent = result.total;
+                batchProcessingTime.textContent = result.processing_time;
+                
+                // Clear table
+                batchResultsTable.innerHTML = '';
+                
+                // Add rows to table
+                result.results.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.className = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/50';
+                    row.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">${item.text}</div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex flex-wrap gap-1">
+                                ${item.predicted_emotions.map(emotion => {
+                                    const colorClass = getEmotionColorClass(emotion);
+                                    return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}">${emotion}</span>`;
+                                }).join('')}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            <button class="text-secondary hover:text-secondary/80 view-details" data-index="${index}">
+                                View Details
+                            </button>
+                        </td>
+                    `;
+                    batchResultsTable.appendChild(row);
+                });
+                
+                // Add event listeners to detail buttons
+                document.querySelectorAll('.view-details').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = e.currentTarget.dataset.index;
+                        showDetailModal(result.results[index]);
+                    });
+                });
+                
+                // Update summary chart
+                updateBatchSummaryChart(result.results);
+                
+                // Show results
+                batchResults.classList.remove('hidden');
+                batchResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                // Reset button
+                batchAnalyzeBtn.disabled = false;
+                batchAnalyzeBtn.innerHTML = '<i class="fa fa-cogs mr-2"></i> Process Batch';
+            }
+        });
+        
+        // Export results functionality
+        exportResultsBtn.addEventListener('click', () => {
+            if (!batchResultsData) return;
+            
+            const csvContent = [
+                // Header
+                ['Text', 'Predicted Emotions', 'Happy', 'Sad', 'Angry', 'Fear', 'Surprise', 'Neutral', 'Processing Time'].join(','),
+                // Rows
+                ...batchResultsData.results.map(result => {
+                    const scores = result.emotion_scores;
+                    return [
+                        `"${result.text.replace(/"/g, '""')}"`,
+                        `"${result.predicted_emotions.join('; ')}"`,
+                        scores.happy ? scores.happy.toFixed(4) : '0',
+                        scores.sad ? scores.sad.toFixed(4) : '0',
+                        scores.angry ? scores.angry.toFixed(4) : '0',
+                        scores.fear ? scores.fear.toFixed(4) : '0',
+                        scores.surprise ? scores.surprise.toFixed(4) : '0',
+                        scores.neutral ? scores.neutral.toFixed(4) : '0',
+                        result.processing_time
+                    ].join(',');
+                })
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'emotion_analysis_results.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+        
+        // Modal functionality
+        const detailModal = document.getElementById('detail-modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalContent = document.getElementById('modal-content');
+        
+        function showDetailModal(data) {
+            // Clear previous content
+            modalContent.innerHTML = '';
+            
+            // Add text
+            const textSection = document.createElement('div');
+            textSection.innerHTML = `
+                <h4 class="font-semibold">Text:</h4>
+                <p class="text-gray-700 dark:text-gray-300 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">${data.text}</p>
+            `;
+            modalContent.appendChild(textSection);
+            
+            // Add emotion scores
+            const scoresSection = document.createElement('div');
+            scoresSection.innerHTML = '<h4 class="font-semibold mt-4 mb-3">Confidence Scores:</h4>';
+            
+            const scoresContainer = document.createElement('div');
+            scoresContainer.className = 'space-y-3';
+            
+            const emotions = Object.entries(data.emotion_scores).sort((a, b) => b[1] - a[1]);
+            emotions.forEach(([emotion, score]) => {
+                const barContainer = document.createElement('div');
+                barContainer.className = 'space-y-1';
+                
+                const barHeader = document.createElement('div');
+                barHeader.className = 'flex justify-between text-sm';
+                barHeader.innerHTML = `
+                    <span>${emotion}</span>
+                    <span class="font-medium">${(score * 100).toFixed(1)}%</span>
+                `;
+                
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5';
+                
+                const barFill = document.createElement('div');
+                const colorClass = getEmotionColor(emotion);
+                barFill.className = `${colorClass} h-2.5 rounded-full transition-all duration-1000 ease-out`;
+                barFill.style.width = `${score * 100}%`;
+                
+                barWrapper.appendChild(barFill);
+                barContainer.appendChild(barHeader);
+                barContainer.appendChild(barWrapper);
+                scoresContainer.appendChild(barContainer);
+            });
+            
+            scoresSection.appendChild(scoresContainer);
+            modalContent.appendChild(scoresSection);
+            
+            // Add processing time
+            const timeSection = document.createElement('div');
+            timeSection.className = 'mt-4 text-sm text-gray-500 dark:text-gray-400';
+            timeSection.innerHTML = `Processing time: ${data.processing_time}`;
+            modalContent.appendChild(timeSection);
+            
+            // Show modal
+            detailModal.classList.remove('hidden');
+        }
+        
+        closeModal.addEventListener('click', () => {
+            detailModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) {
+                detailModal.classList.add('hidden');
+            }
+        });
+        
+        // Helper functions
+        function getEmotionColorClass(emotion) {
+            const colors = {
+                happy: 'bg-happy/20 text-happy',
+                sad: 'bg-sad/20 text-sad',
+                angry: 'bg-angry/20 text-angry',
+                fear: 'bg-fear/20 text-fear',
+                surprise: 'bg-surprise/20 text-surprise',
+                neutral: 'bg-neutral/20 text-neutral'
+            };
+            return colors[emotion.toLowerCase()] || 'bg-gray-200 text-gray-800';
+        }
+        
+        function getEmotionColor(emotion) {
+            const colors = {
+                happy: 'bg-happy',
+                sad: 'bg-sad',
+                angry: 'bg-angry',
+                fear: 'bg-fear',
+                surprise: 'bg-surprise',
+                neutral: 'bg-neutral'
+            };
+            return colors[emotion.toLowerCase()] || 'bg-gray-500';
+        }
+        
+        function updateEmotionChart(scores) {
+            const ctx = document.getElementById('emotion-chart').getContext('2d');
+            const emotions = Object.keys(scores);
+            const values = Object.values(scores);
+            const colors = emotions.map(getChartColor);
+            
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+            
+            emotionChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: emotions,
+                    datasets: [{
+                        label: 'Confidence',
+                        data: values,
+                        backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                        borderColor: 'rgba(79, 70, 229, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: colors,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 1,
+                            ticks: {
+                                callback: function(value) {
+                                    return (value * 100) + '%';
+                                },
+                                color: html.classList.contains('dark') ? '#9CA3AF' : '#4B5563'
+                            },
+                            grid: {
+                                color: html.classList.contains('dark') ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            },
+                            pointLabels: {
+                                color: html.classList.contains('dark') ? '#E5E7EB' : '#1F2937',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + ((context.raw * 100).toFixed(1)) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateBatchSummaryChart(results) {
+            // Count emotions across all results
+            const emotionCounts = {
+                happy: 0,
+                sad: 0,
+                angry: 0,
+                fear: 0,
+                surprise: 0,
+                neutral: 0
+            };
+            
+            results.forEach(result => {
+                result.predicted_emotions.forEach(emotion => {
+                    if (emotionCounts.hasOwnProperty(emotion.toLowerCase())) {
+                        emotionCounts[emotion.toLowerCase()]++;
+                    }
+                });
+            });
+            
+            const ctx = document.getElementById('batch-summary-chart').getContext('2d');
+            const emotions = Object.keys(emotionCounts);
+            const counts = Object.values(emotionCounts);
+            const colors = emotions.map(getChartColor);
+            
+            if (batchSummaryChart) {
+                batchSummaryChart.destroy();
+            }
+            
+            batchSummaryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: emotions,
+                    datasets: [{
+                        label: 'Count',
+                        data: counts,
+                        backgroundColor: colors.map(color => color + '80'), // Add opacity
+                        borderColor: colors,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        barThickness: 30
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: html.classList.contains('dark') ? '#9CA3AF' : '#4B5563'
+                            },
+                            grid: {
+                                color: html.classList.contains('dark') ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: html.classList.contains('dark') ? '#9CA3AF' : '#4B5563'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        function getChartColor(emotion) {
+            const colors = {
+                happy: '#10B981',
+                sad: '#3B82F6',
+                angry: '#EF4444',
+                fear: '#8B5CF6',
+                surprise: '#F59E0B',
+                neutral: '#64748B'
+            };
+            return colors[emotion.toLowerCase()] || '#6B7280';
+        }
+        
+        function updateChartThemes() {
+            if (emotionChart) {
+                const isDark = html.classList.contains('dark');
+                emotionChart.options.scales.r.ticks.color = isDark ? '#9CA3AF' : '#4B5563';
+                emotionChart.options.scales.r.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                emotionChart.options.scales.r.pointLabels.color = isDark ? '#E5E7EB' : '#1F2937';
+                emotionChart.update();
+            }
+            
+            if (batchSummaryChart) {
+                const isDark = html.classList.contains('dark');
+                batchSummaryChart.options.scales.y.ticks.color = isDark ? '#9CA3AF' : '#4B5563';
+                batchSummaryChart.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                batchSummaryChart.options.scales.x.ticks.color = isDark ? '#9CA3AF' : '#4B5563';
+                batchSummaryChart.update();
+            }
+        }
+        
+        // Add fade-in animation
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.5s ease-out;
+                }
+            </style>
+        `);
+    </script>
+
+        <!-- README Language Switcher -->
+        <script>
+            // 语言切换功能
+            document.getElementById('en-readme-btn').addEventListener('click', function() {
+                this.classList.remove('bg-gray-200', 'text-gray-700');
+                this.classList.add('bg-blue-500', 'text-white');
+                document.getElementById('cn-readme-btn').classList.remove('bg-blue-500', 'text-white');
+                document.getElementById('cn-readme-btn').classList.add('bg-gray-200', 'text-gray-700');
+                loadReadme('README.md');
+            });
+
+            document.getElementById('cn-readme-btn').addEventListener('click', function() {
+                this.classList.remove('bg-gray-200', 'text-gray-700');
+                this.classList.add('bg-blue-500', 'text-white');
+                document.getElementById('en-readme-btn').classList.remove('bg-blue-500', 'text-white');
+                document.getElementById('en-readme-btn').classList.add('bg-gray-200', 'text-gray-700');
+                loadReadme('READMECN.md');
+            });
+
+            // 加载README文件
+            function loadReadme(filename) {
+                // 创建一个隐藏的iframe来加载README内容
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/' + filename);
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        // 简单的Markdown渲染
+                        let content = xhr.responseText;
+                        // 基本的Markdown到HTML转换
+                        content = content.replace(/#{6}\s+([^\n]+)/g, '<h6>$1</h6>');
+                        content = content.replace(/#{5}\s+([^\n]+)/g, '<h5>$1</h5>');
+                        content = content.replace(/#{4}\s+([^\n]+)/g, '<h4>$1</h4>');
+                        content = content.replace(/#{3}\s+([^\n]+)/g, '<h3>$1</h3>');
+                        content = content.replace(/#{2}\s+([^\n]+)/g, '<h2>$1</h2>');
+                        content = content.replace(/#{1}\s+([^\n]+)/g, '<h1>$1</h1>');
+                        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                        content = content.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+                        content = content.replace(/\n/g, '<br>');
+                        
+                        document.getElementById('readme-content').innerHTML = content;
+                    } else {
+                        document.getElementById('readme-content').innerHTML = '<p>Failed to load documentation. Please refresh the page.</p>';
+                    }
+                };
+                xhr.onerror = function() {
+                    document.getElementById('readme-content').innerHTML = '<p>Error loading documentation. Please check your connection.</p>';
+                };
+                xhr.send();
+            }
+
+            // 初始加载英文README
+            window.onload = function() {
+                loadReadme('README.md');
+            };
+        </script>
+</body>
+</html>
