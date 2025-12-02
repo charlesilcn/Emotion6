@@ -191,9 +191,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 - [Chart.js](https://www.chartjs.org/) for the interactive data visualization
 - [XLM-RoBERTa](https://github.com/facebookresearch/fairseq/tree/main/examples/xlmr) for the multilingual foundation model
 
----
-
-<div align="center">
-  <p><strong>Emotion6 - Advanced Deep Learning for Human-Level Emotion Understanding</strong></p>
-  <p>© 2024 Emotion6 Team</p>
-</div>
